@@ -145,7 +145,7 @@ def Do(n_qbits=6, depth=0, function='DataLoading'):
     #QPU connection
     try:
         from qat.qlmaas import QLMaaSConnection
-        connection = QLMaaSConnection('qlm')
+        connection = QLMaaSConnection()
         lin_alg = connection.get_qpu("qat.qpus:LinAlg")
         lineal_qpu = lin_alg()
     except (ImportError, OSError) as e:
