@@ -140,6 +140,58 @@ def multiplexor_ry_m(qprog, qbits, thetas, r_controls, i_target):
     multiplexor_ry_m_recurs(qprog, qbits, thetas, r_controls, i_target)
     qprog.apply(CNOT, qbits[i_target-r_controls], qbits[i_target])
 
+def load_crbs_gate(thetas):
+    """
+    Creates a customized AbstractGate for doing a rotation controlled
+    by quantum state using Quantum Multiplexors. The idea behind a
+    controlled rotation by state (crbs) is given an state |q>
+    and a list of angles thetas then apply:
+    RY(thetas[0]) if |q>=|0>
+    RY(thetas[1]) if |q>=|1>
+    ...
+    RY(thetas[i]) if |q>=|i>
+
+    Parameters
+    ----------
+
+    thetas : numpy array
+        Array with the list of angles for rotation
+
+    Returns
+    ----------
+
+    CRBS_Gate :  AbstractGate
+        Customized Abstract Gate for making controlled rotations by
+        state using Quantum Multiplexors
+
+    """
+
+    #Number of qbits needed for doing the rotations of the input
+    n_qbits = test_bins(thetas, text='Probability')
+    m = n_qbits
+
+    @build_gate("CRBS_Gate_{}".format(len(thetas)), [], arity=n_qbits+1)
+    def crbs_gate():
+        """
+        Function generator for the AbstractGate that performs rotations
+        in function of the quantum state by using
+        Quantum Multiplexors.
+
+        Returns
+        ----------
+
+        q_rout : Quantum Routine
+            Quantum Routine for making rotation depending on quantum state
+            Quantum Multiplexors
+        """
+        q_rout = QRoutine()
+        reg = q_rout.new_wires(n_qbits+1)
+        #recursive function to implement quantum multiplexors
+        multiplexor_ry_m_recurs(q_rout, reg, thetas, m, m)
+        q_rout.apply(CNOT, reg[m-m], reg[m])
+        return q_rout
+    return crbs_gate()
+
 def load_p_gate(probability_array):
     """
     Creates a customized AbstractGate for loading a discretized
@@ -200,7 +252,14 @@ def load_p_gate(probability_array):
                 # We call a function to construct the multiplexor,
                 # whose action is a block diagonal matrix of Ry gates
                 # with angles theta
-                multiplexor_ry_m(qrout, reg, thetas, m, m)
+
+                #Original implementation
+                #multiplexor_ry_m(qrout, reg, thetas, m, m)
+
+                #Implementation using an Abstract Gate for a controlled
+                #by state rotation
+                crbs_gate = load_crbs_gate(thetas)
+                qrout.apply(crbs_gate, reg[:crbs_gate.arity])
         return qrout
     return p_gate_qm()
 
@@ -250,6 +309,11 @@ def load_r_gate(function_array):
         """
         qrout = QRoutine()
         reg = qrout.new_wires(nqbits+1)
-        multiplexor_ry_m(qrout, reg, thetas, nqbits, nqbits)
+        #Original implementation
+        #multiplexor_ry_m(qrout, reg, thetas, nqbits, nqbits)
+
+        #Implementation of controlled by state Rotation using Abstract Gate
+        crbs_gate = load_crbs_gate(thetas)
+        qrout.apply(crbs_gate, reg[:crbs_gate.arity])
         return qrout
     return r_gate_qm()
