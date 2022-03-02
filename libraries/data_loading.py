@@ -130,7 +130,6 @@ def load_angles(angles: np.array,method: str="multiplexor"):
         routine = multiplexor_RY(angles)
     return routine
 
-
 def load_probability(probability_array: np.array):
     """
     Creates an Abstract gate for loading the square roots of a discretized
@@ -171,3 +170,4 @@ def load_probability(probability_array: np.array):
             routine.apply(multiplexor_RY(thetas),\
                           register[number_qubits-m:number_qubits],register[number_qubits-m-1])
     return routine
+
