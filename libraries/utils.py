@@ -1,5 +1,6 @@
 import qat.lang.AQASM as qlm
 import numpy as np
+import pandas as pd
 
 # Convierte un entero n en un array de bits de longitud size
 def bitfield(n,size):
@@ -20,6 +21,85 @@ def mask(number_qubits,index):
 
     return routine
 
+def fwht_natural(array: np.array):
+    """Fast Walsh-Hadamard Transform of array x in natural ordering
+    The result is not normalised"""
+    a = array.copy()
+    h = 1
+    while h < len(a):
+        for i in range(0, len(a), h * 2):
+            for j in range(i, i + h):
+                x = a[j]
+                y = a[j + h]
+                a[j] = x + y
+                a[j + h] = x - y
+        h *= 2
+    return a
+
+def fwht_sequency(x: np.array):
+    """ Fast Walsh-Hadamard Transform of array x in sequency ordering
+    The result is not normalised
+    Based on mex function written by Chengbo Li@Rice Uni for his TVAL3 algorithm.
+    His code is according to the K.G. Beauchamp's book -- Applications of Walsh and Related Functions.
+    """
+    N = x.size
+    G = int(N/2) # Number of Groups
+    M = 2 # Number of Members in Each Group
+
+    # First stage
+    y = np.zeros((int(N/2),2))
+    y[:,0] = x[0::2] + x[1::2]
+    y[:,1] = x[0::2] - x[1::2]
+    x = y.copy()
+    # Second and further stage
+    for nStage in  range(2,int(np.log2(N))+1):
+        y = np.zeros((int(G/2),M*2))
+        y[0:int(G/2),0:M*2:4] = x[0:G:2,0:M:2] + x[1:G:2,0:M:2]
+        y[0:int(G/2),1:M*2:4] = x[0:G:2,0:M:2] - x[1:G:2,0:M:2]
+        y[0:int(G/2),2:M*2:4] = x[0:G:2,1:M:2] - x[1:G:2,1:M:2]
+        y[0:int(G/2),3:M*2:4] = x[0:G:2,1:M:2] + x[1:G:2,1:M:2]
+        x = y.copy()
+        G = int(G/2)
+        M = M*2
+    x = y[0,:]
+    return x
+
+def fwht_dyadic(x: np.array):
+    """ Fast Walsh-Hadamard Transform of array x in dyadic ordering
+    The result is not normalised
+    Based on mex function written by Chengbo Li@Rice Uni for his TVAL3 algorithm.
+    His code is according to the K.G. Beauchamp's book -- Applications of Walsh and Related Functions.
+    """
+    N = x.size
+    G = int(N/2) # Number of Groups
+    M = 2 # Number of Members in Each Group
+
+    # First stage
+    y = np.zeros((int(N/2),2))
+    y[:,0] = x[0::2] + x[1::2]
+    y[:,1] = x[0::2] - x[1::2]
+    x = y.copy()
+    # Second and further stage
+    for nStage in  range(2,int(np.log2(N))+1):
+        y = np.zeros((int(G/2),M*2))
+        y[0:int(G/2),0:M*2:4] = x[0:G:2,0:M:2] + x[1:G:2,0:M:2]
+        y[0:int(G/2),1:M*2:4] = x[0:G:2,0:M:2] - x[1:G:2,0:M:2]
+        y[0:int(G/2),2:M*2:4] = x[0:G:2,1:M:2] + x[1:G:2,1:M:2]
+        y[0:int(G/2),3:M*2:4] = x[0:G:2,1:M:2] - x[1:G:2,1:M:2]
+        x = y.copy()
+        G = int(G/2)
+        M = M*2
+    x = y[0,:]
+    return x
+
+def fwht(x: np.array,ordering: str = "sequency"):
+    if (ordering == "natural"):
+        y = fwht_natural(x)
+    elif (ordering == "dyadic"):
+        y = fwht_dyadic(x)
+    else:
+        y = fwht_sequency(x)
+    return y
 
 #Lo de Zalo
 """
@@ -30,8 +110,7 @@ Version: Initial version
 MyQLM version:
 
 """
-import numpy as np
-import pandas as pd
+
 
 def test_bins(array, text='probability'):
     """
@@ -104,14 +183,14 @@ def left_conditional_probability(initial_bins, probability):
     #probability for x located in each one of the bins of Initial
     #domain division
     prob4dd = [
-        sum(probability[j*bins_by_dd:j*bins_by_dd+bins_by_dd]) \
+        np.sum(probability[j*bins_by_dd:j*bins_by_dd+bins_by_dd]) \
         for j in range(domain_divisions)
     ]
     #Each bin of Initial domain division is splitted in 2 equal parts
     bins4_left_dd = nbins//(2**(initial_bins+1))
     #probability for x located in the left bin of the new splits
     left_probabilities = [
-        sum(probability[j*bins_by_dd:j*bins_by_dd+bins4_left_dd])\
+        np.sum(probability[j*bins_by_dd:j*bins_by_dd+bins4_left_dd])\
         for j in range(domain_divisions)
     ]
     #Conditional probability of x located in the left bin when x is located
