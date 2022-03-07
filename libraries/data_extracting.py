@@ -1,10 +1,11 @@
 import qat.lang.AQASM as qlm
-from qat.qpus import LinAlg
+#from qat.qpus import LinAlg
 from qat.core import Result
 import numpy as np
 
 # Measure probabilities
-def measure_probabilities(gate,shots = 0):
+#def measure_probabilities(gate,shots = 0):
+def measure_probabilities(gate, linalg_qpu, shots=0):
     program = qlm.Program()
     number_qubits = gate.arity
     quantum_register = program.qalloc(number_qubits)
@@ -13,7 +14,7 @@ def measure_probabilities(gate,shots = 0):
     
     
     job = circuit.to_job(nbshots = shots)
-    linalg_qpu = LinAlg()
+    #linalg_qpu = LinAlg()
     result = linalg_qpu.submit(job)
     if not isinstance(result,Result):
         result = result.join()
@@ -25,14 +26,15 @@ def measure_probabilities(gate,shots = 0):
     return result_array
 
 # Measure probabilities
-def measure_amplitudes(gate,shots = 0):
+#def measure_amplitudes(gate,shots = 0):
+def measure_amplitudes(gate, linalg_qpu, shots=0):
     program = qlm.Program()
     quantum_register = program.qalloc(gate.arity)
     program.apply(gate,quantum_register)
     circuit = program.to_circ()
 
     job = circuit.to_job(nbshots = shots)
-    linalg_qpu = LinAlg()
+    #linalg_qpu = LinAlg()
     result = linalg_qpu.submit(job)
     if not isinstance(result,Result):
         result = result.join()
