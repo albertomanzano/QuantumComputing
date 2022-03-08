@@ -242,6 +242,7 @@ def get_histogram(p, a, b, nbin):
         normalized properly'
     return centers, probs
 
+
 def postprocess_results(results):
     """
     Post-processing the results of simulation of a quantum circuit
@@ -258,18 +259,20 @@ def postprocess_results(results):
         Probability: probabilities of the different states
         Amplitude: amplitude of the different states
     """
-    q_probability = []
-    q_states = []
-    q_amplitude = []
+
+    list_of_pdfs = []
     for sample in results:
-        q_probability.append(sample.probability)
-        #q_states.append(str(sample.state))
-        q_states.append(sample.state)
-        q_amplitude.append(sample.amplitude)
-    q_probability = pd.Series(q_probability, name='Probability')
-    q_states = pd.Series(q_states, name='States')
-    q_amplitude = pd.Series(q_amplitude, name='Amplitude')
-    pdf = pd.concat([q_states, q_probability, q_amplitude], axis=1)
+        step_pdf = pd.DataFrame({
+            'Probability': [sample.probability],
+            'States': [sample.state],
+            'Amplitude': [sample.amplitude],
+            'Int': [sample.state.int],
+            'Int_lsb': [sample.state.lsb_int]
+            
+        })
+        list_of_pdfs.append(step_pdf)
+    pdf = pd.concat(list_of_pdfs)
+    pdf.reset_index(drop=True, inplace=True)
     return pdf
 
 def run_job(result):

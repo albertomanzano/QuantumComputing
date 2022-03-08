@@ -130,9 +130,49 @@ def load_angles(angles: np.array,method: str="multiplexor"):
         routine = multiplexor_RY(angles)
     return routine
 
+def load_array(function_array: np.array, method: str = "multiplexor"):
+    """
+    Creates an Abstract gate for loading a normalised array.
+
+    Parameters
+    ----------
+    function_array : numpy array
+        Numpy array with the normalised array to load. The arity of
+        of the gate is int(np.log2(len(probability_array)))+1.
+    method : str
+        type of loading method used:
+            multiplexor : with quantum Multiplexors
+            brute_force : using multicontrolled rotations by state
+
+    Return
+    ----------
+
+    R_Gate: AbstractGate
+        AbstractGate customized for loading a normalised array
+    """
+    number_qubits = int(np.log2(function_array.size))+1
+    @build_gate("R_Gate", [], arity=number_qubits)
+    def load_r_gate():
+        """
+        Function generator for creating an AbstractGate that allows
+        the loading of the integral of a given discretized function
+        array into a Quantum State using Quantum Multiplexors.
+        Returns
+        ----------
+        routine : quantum routine
+            Routine for loading a normalised input array
+        """
+        routine = QRoutine()
+        register = routine.new_wires(number_qubits)
+        angles = 2*np.arccos(function_array)
+        routine.apply(load_angles(angles, method=method), register)
+        return routine
+    return load_r_gate()
+
+
 def load_probability(probability_array: np.array):
     """
-    Creates an Abstract gate for loading the square roots of a discretized
+    Creates an Abstract gate for loading an input discretized
     Probability Distribution using Quantum Multiplexors.
 
     Parameters
@@ -141,33 +181,89 @@ def load_probability(probability_array: np.array):
         Numpy array with the discretized probability to load. The arity of
         of the gate is int(np.log2(len(probability_array))).
 
-    Raises
+    Returns
     ----------
-    AssertionError
-        if len(probability_array) != 2^n
+
+    P_Gate :  AbstractGate
+        Customized Abstract Gate for Loading Probability array using
+        Quantum Multiplexors
     """
     number_qubits = int(np.log2(probability_array.size))
-    routine = QRoutine()
-    register = routine.new_wires(number_qubits)
-    # Now go iteratively trough each qubit computing the
-    #probabilities and adding the corresponding multiplexor
-    for m in range(number_qubits):
-        print(m)
-        #Calculates Conditional Probability
-        conditional_probability = left_conditional_probability(m, probability_array)
-        #Rotation angles: length: 2^(i-1)-1 and i the number of
-        #qbits of the step
-        thetas = 2.0*(np.arccos(np.sqrt(conditional_probability)))
-        if m == 0:
-            # In the first iteration it is only needed a RY gate
-            routine.apply(RY(thetas[0]), register[number_qubits-1])
-        else:
-            # In the following iterations we have to apply
-            # multiplexors controlled by m qubits
-            # We call a function to construct the multiplexor,
-            # whose action is a block diagonal matrix of Ry gates
-            # with angles theta
-            routine.apply(multiplexor_RY(thetas),\
-                          register[number_qubits-m:number_qubits],register[number_qubits-m-1])
-    return routine
 
+    @build_gate("P_Gate", [], arity=number_qubits)
+    def load_p_gate():
+        """
+        Function generator for the AbstractGate that allows the loading
+        of a discretized Probability in a Quantum State using Quantum
+        Multiplexors.
+
+        Returns
+        ----------
+
+        routine : Quantum Routine
+            Quantum Routine for loading Probability using Quantum
+            Multiplexors
+        """
+        routine = QRoutine()
+        register = routine.new_wires(number_qubits)
+        # Now go iteratively trough each qubit computing the
+        #probabilities and adding the corresponding multiplexor
+        for m in range(number_qubits):
+            #print(m)
+            #Calculates Conditional Probability
+            conditional_probability = left_conditional_probability(m,\
+            probability_array)
+            #Rotation angles: length: 2^(i-1)-1 and i the number of
+            #qbits of the step
+            thetas = 2.0*(np.arccos(np.sqrt(conditional_probability)))
+            if m == 0:
+                # In the first iteration it is only needed a RY gate
+                routine.apply(RY(thetas[0]), register[number_qubits-1])
+            else:
+                # In the following iterations we have to apply
+                # multiplexors controlled by m qubits
+                # We call a function to construct the multiplexor,
+                # whose action is a block diagonal matrix of Ry gates
+                # with angles theta
+                routine.apply(
+                    multiplexor_RY(thetas),
+                    register[number_qubits-m:number_qubits],
+                    register[number_qubits-m-1]
+                )
+        return routine
+    return load_p_gate()
+
+def load_pr_gate(p_gate, r_gate):
+    """
+    Create complete AbstractGate for applying Operators P and R
+    The operator to implement is:
+        p_gate*r_gate
+
+    Parameters
+    ----------
+    p_gate : QLM AbstractGate
+        Customized AbstractGate for loading probability distribution.
+    r_gate : QLM AbstractGate
+        Customized AbstractGatel for loading integral of a function f(x)
+    Returns
+    ----------
+    PR_Gate : AbstractGate
+        Customized AbstractGate for loading the P and R operators
+    """
+    nqbits = r_gate.arity
+    @build_gate("PR_Gate", [], arity=nqbits)
+    def pr_gate():
+        """
+        Function generator for creating an AbstractGate for implementation
+        of the Amplification Amplitude Algorithm (Q)
+        Returns
+        ----------
+        q_rout : quantum routine
+            Routine for Amplitude Amplification Algorithm
+        """
+        q_rout = QRoutine()
+        qbits = q_rout.new_wires(nqbits)
+        q_rout.apply(p_gate, qbits[:-1])
+        q_rout.apply(r_gate, qbits)
+        return q_rout
+    return pr_gate()
