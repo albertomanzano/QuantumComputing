@@ -130,7 +130,8 @@ def load_angles(angles: np.array,method: str="multiplexor"):
         routine = multiplexor_RY(angles)
     return routine
 
-def load_array(function_array: np.array, method: str = "multiplexor"):
+def load_array(function_array: np.array, method: str = "multiplexor",\
+id_name: str = '1'):
     """
     Creates an Abstract gate for loading a normalised array.
 
@@ -147,27 +148,21 @@ def load_array(function_array: np.array, method: str = "multiplexor"):
     Return
     ----------
 
-    R_Gate: AbstractGate
+    f_gate: AbstractGate
         AbstractGate customized for loading a normalised array
     """
     number_qubits = int(np.log2(function_array.size))+1
-    @build_gate("R_Gate", [], arity=number_qubits)
-    def load_r_gate():
+    @build_gate("F_{"+id_name+"}", [], arity=number_qubits)
+    def load_array_gate():
         """
-        Function generator for creating an AbstractGate that allows
-        the loading of the integral of a given discretized function
-        array into a Quantum State using Quantum Multiplexors.
-        Returns
-        ----------
-        routine : quantum routine
-            Routine for loading a normalised input array
+        QLM Routine generation.
         """
         routine = QRoutine()
         register = routine.new_wires(number_qubits)
         angles = 2*np.arccos(function_array)
         routine.apply(load_angles(angles, method=method), register)
         return routine
-    return load_r_gate()
+    return load_array_gate()
 
 
 def load_probability(probability_array: np.array):
@@ -190,19 +185,10 @@ def load_probability(probability_array: np.array):
     """
     number_qubits = int(np.log2(probability_array.size))
 
-    @build_gate("P_Gate", [], arity=number_qubits)
-    def load_p_gate():
+    @build_gate("P", [], arity=number_qubits)
+    def load_probability_gate():
         """
-        Function generator for the AbstractGate that allows the loading
-        of a discretized Probability in a Quantum State using Quantum
-        Multiplexors.
-
-        Returns
-        ----------
-
-        routine : Quantum Routine
-            Quantum Routine for loading Probability using Quantum
-            Multiplexors
+        QLM Routine generation.
         """
         routine = QRoutine()
         register = routine.new_wires(number_qubits)
@@ -231,9 +217,9 @@ def load_probability(probability_array: np.array):
                     register[number_qubits-m-1]
                 )
         return routine
-    return load_p_gate()
+    return load_probability_gate()
 
-def load_pr_gate(p_gate, r_gate):
+def load_pf(p_gate, f_gate):
     """
     Create complete AbstractGate for applying Operators P and R
     The operator to implement is:
@@ -243,27 +229,22 @@ def load_pr_gate(p_gate, r_gate):
     ----------
     p_gate : QLM AbstractGate
         Customized AbstractGate for loading probability distribution.
-    r_gate : QLM AbstractGate
+    f_gate : QLM AbstractGate
         Customized AbstractGatel for loading integral of a function f(x)
     Returns
     ----------
-    PR_Gate : AbstractGate
+    pr_gate : AbstractGate
         Customized AbstractGate for loading the P and R operators
     """
-    nqbits = r_gate.arity
-    @build_gate("PR_Gate", [], arity=nqbits)
-    def pr_gate():
+    nqbits = f_gate.arity
+    @build_gate("PF", [], arity=nqbits)
+    def load_pf_gate():
         """
-        Function generator for creating an AbstractGate for implementation
-        of the Amplification Amplitude Algorithm (Q)
-        Returns
-        ----------
-        q_rout : quantum routine
-            Routine for Amplitude Amplification Algorithm
+        QLM Routine generation.
         """
         q_rout = QRoutine()
         qbits = q_rout.new_wires(nqbits)
         q_rout.apply(p_gate, qbits[:-1])
-        q_rout.apply(r_gate, qbits)
+        q_rout.apply(f_gate, qbits)
         return q_rout
-    return pr_gate()
+    return load_pf_gate()
