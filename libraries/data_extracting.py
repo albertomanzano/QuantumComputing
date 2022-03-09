@@ -5,48 +5,6 @@ import numpy as np
 from utils import run_job, postprocess_results
 from copy import deepcopy
 
-# Measure probabilities
-#def measure_probabilities(gate,shots = 0):
-def measure_probabilities(gate, linalg_qpu, shots=0):
-    program = qlm.Program()
-    number_qubits = gate.arity
-    quantum_register = program.qalloc(number_qubits)
-    program.apply(gate,quantum_register)
-    circuit = program.to_circ()
-    
-    
-    job = circuit.to_job(nbshots = shots)
-    #linalg_qpu = LinAlg()
-    result = linalg_qpu.submit(job)
-    if not isinstance(result,Result):
-        result = result.join()
-
-    # Result
-    result_array = np.zeros(2**number_qubits)
-    for sample in result:
-        result_array[sample.state.lsb_int] = sample.probability
-    return result_array
-
-# Measure probabilities
-#def measure_amplitudes(gate,shots = 0):
-def measure_amplitudes(gate, linalg_qpu, shots=0):
-    program = qlm.Program()
-    quantum_register = program.qalloc(gate.arity)
-    program.apply(gate,quantum_register)
-    circuit = program.to_circ()
-
-    job = circuit.to_job(nbshots = shots)
-    #linalg_qpu = LinAlg()
-    result = linalg_qpu.submit(job)
-    if not isinstance(result,Result):
-        result = result.join()
-
-    # Result
-    result_array = np.zeros(2**number_qubits)
-    for sample in result:
-        result_array[sample.state.lsb_int] = sample.probability
-    return result_array
-
 def create_qprogram(quantum_gate):
     """
     Creates a Quantum Program from an input qlm gate or routine
