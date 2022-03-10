@@ -23,6 +23,7 @@ import copy
 import numpy as np
 import pandas as pd
 import scipy.optimize as so
+from qat.core import Batch
 
 from utils import run_job, postprocess_results
 from data_extracting import create_qprogram
@@ -169,7 +170,7 @@ def likelihood(theta, m_k, h_k, n_k):
     l_k = first_term + second_term
     return -np.sum(l_k)
 
-class MaximumLikelihoodAE:
+class MLAE:
     """
     Class for using Maximum Likelihood Quantum Amplitude Estimation (ML-AE)
     algorithm
@@ -285,7 +286,7 @@ class MaximumLikelihoodAE:
         )
         return circuit, job
 
-    def result_processing(self, result, mk):
+    def result_processing(self, result_, mk):
         """
         This method receives a QLM Result object and proccess it in a 
         propper way for posterior applying of maximum likelihood algorithm
@@ -306,7 +307,7 @@ class MaximumLikelihoodAE:
             likelihood algorithm
 
         """
-        result_ = run_job(result)
+        #result_ = run_job(result)
         pdf_ = postprocess_results(result_)
         #Change the result presentation
         pdf = get_probabilities(pdf_)
@@ -347,13 +348,14 @@ class MaximumLikelihoodAE:
             results of the measurement of the last qbit
         """
         #Complete Job Submision
-        submited_jobs = []
-        for job in list_of_jobs:
-            submited_jobs.append(self.lineal_qpu.submit(job))
-        #Getting the results
+
+        batch_result = self.lineal_qpu.submit(Batch(list_of_jobs))
+        results = run_job(batch_result)
+
         pdf_list = []
-        for result, m_k in zip(submited_jobs, list_of_mks):
+        for result, m_k in zip(results.results, list_of_mks):
             pdf_list.append(self.result_processing(result, m_k))
+
         pdf_mks = pd.concat(pdf_list)
         pdf_mks.reset_index(drop=True, inplace=True)
             
