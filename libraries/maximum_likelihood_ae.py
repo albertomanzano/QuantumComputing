@@ -176,7 +176,7 @@ class MLAE:
     algorithm
     """
 
-    def __init__(self, base_gate, **kwargs):
+    def __init__(self, **kwargs):
         """
 
         Method for initializing the class
@@ -184,11 +184,20 @@ class MLAE:
         Parameters
         ----------
         
-        base_gate : QLM gate (mandatory)
-            Base QLM gate for implementing the Groover-like operator
         kwars : dictionary
             dictionary that allows the configuration of the ML-QPE algorithm:
             Implemented keys:
+            oracle: QLM gate
+                QLM gate with the Oracle for implementing the
+                Groover-like operator:
+                init_q_prog and q_gate will be interpreted as None
+            initial_state : QLM Program
+                QLM Program withe the initial Psi state over the
+                Grover-like operator will be applied
+                Only used if oracle is None
+            grover : QLM gate or routine
+                Grover-like operator which autovalues want to be calculated
+                Only used if oracle is None
             list_of_mks : list
                 python list with the different m_ks for executing the algortihm
             nbshots : int
@@ -206,8 +215,22 @@ class MLAE:
             display : bool
                 for displaying additional information in the optimization step
         """
-        #Base Quantum Gate for creating Grover-like operator
-        self.base_gate = base_gate
+        #Setting attributes
+        self.oracle = kwargs.get('oracle', None)
+        if self.oracle is not None:
+            #Creates QLM program from base gate
+            self.q_prog = create_qprogram(self.oracle)
+            #Creates the Grover-like operator from oracle
+            self.q_gate = load_q_gate(self.oracle)
+        else:
+            #In this case we load directly the initial state 
+            #and the grover operator
+            self.q_prog = kwargs.get('initial_state', None)
+            self.q_gate = kwargs.get('grover', None)
+            if (self.q_prog is None) or (self.q_gate is None):
+                text = """If oracle was not provided initial_state and grover
+                keys should be provided"""
+                raise KeyError(text)
 
         #A complete list of m_k
         self.list_of_mks_ = kwargs.get('list_of_mks', 10)
@@ -230,10 +253,6 @@ class MLAE:
         self.disp = kwargs.get('disp', True)
         #Setting attributes
         self.restart()
-        #Creates the Grover-like operator from base gate
-        self.q_gate = load_q_gate(self.base_gate)
-        #Creates QLM program from base gate
-        self.q_prog = create_qprogram(self.base_gate)
 
     def restart(self):
         self.pdf_mks = None
