@@ -104,7 +104,7 @@ def get_results(quantum_object, linalg_qpu, shots=0, qubits=None):
     job = create_job(circuit, shots=shots, qubits=qubits)
     result = run_job(linalg_qpu.submit(job))
     pdf_ = postprocess_results(result)
-    #pdf_.sort_values('Int_lsb', inplace=True)
+    pdf_.sort_values('Int_lsb', inplace=True)
     return pdf_, circuit, q_prog, job
 
 
