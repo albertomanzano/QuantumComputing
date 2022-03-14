@@ -11,56 +11,13 @@ Authors: Alberto Pedro Manzano Herrero & Gonzalo Ferro Costas
 """
 
 import qat.lang.AQASM as qlm
-#from qat.qpus import LinAlg
 from qat.core import Result
 import numpy as np
-from utils import run_job, postprocess_results
-from copy import deepcopy
+import pandas as pd
+pd.options.display.float_format = '{:.2f}'.format
+np.set_printoptions(suppress=True)
 
-def create_qprogram(quantum_gate):
-    """
-    Creates a Quantum Program from an input qlm gate or routine
-
-    Parameters
-    ----------
-
-    quantum_gate : QLM gate or QLM routine
-
-    Returns
-    ----------
-    q_prog: QLM Program.
-        Quantum Program from input QLM gate or routine
-    """
-    q_prog = qlm.Program()
-    qbits = q_prog.qalloc(quantum_gate.arity)
-    q_prog.apply(quantum_gate, qbits)
-    return q_prog
-
-def create_circuit(prog_q):
-    """
-    Given a QLM program creates a QLM circuit
-    """
-    q_prog = deepcopy(prog_q)
-    circuit = q_prog.to_circ(submatrices_only=True)
-    return circuit
-
-def create_job(circuit, shots=0, qubits=None):
-    """
-    Given a QLM circuit creates a QLM job
-    """
-    dict_job = {
-        'amp_threshold': 0.0
-    }
-    if qubits is None:
-        job = circuit.to_job(nbshots=shots, **dict_job)
-    else:
-        if isinstance(qubits, (list)):
-            job = circuit.to_job(nbshots=shots, qubits=qubits, **dict_job)
-        else:
-            raise ValueError('qbits: sould be a list!!!')
-    return job
-
-def get_results(quantum_object, linalg_qpu, shots=0, qubits=None):
+def get_results(quantum_object, linalg_qpu, shots:int = 0, qubits: list = None):
     """
     Function for testing an input gate. This fucntion creates the
     quantum program for an input gate, the correspondent circuit
@@ -92,20 +49,25 @@ def get_results(quantum_object, linalg_qpu, shots=0, qubits=None):
         q_prog = qlm.Program()
         qbits = q_prog.qalloc(quantum_object.arity)
         q_prog.apply(quantum_object, qbits)
-    #circuit = q_prog.to_circ(submatrices_only=True)
-    circuit = create_circuit(q_prog)
-    #dict_job = {
-    #    'amp_threshold': 0.0
-    #}
-    #if qubits is None:
-    #    job = circuit.to_job(nbshots=shots, **dict_job)
-    #if type(qubits) == list:
-    #    job = circuit.to_job(nbshots=shots, qubits=qubits, **dict_job)
-    job = create_job(circuit, shots=shots, qubits=qubits)
-    result = run_job(linalg_qpu.submit(job))
-    pdf_ = postprocess_results(result)
-    pdf_.sort_values('Int_lsb', inplace=True)
-    return pdf_, circuit, q_prog, job
+    circuit = q_prog.to_circ(submatrices_only=True)
+    dict_job = {'amp_threshold': 0.0}
+    job = circuit.to_job(nbshots=shots, qubits=qubits, **dict_job)
+    
+    result = linalg_qpu.submit(job)
+    if not isinstance(result,Result):
+        result = result.join()
+    
+    pdf = pd.DataFrame({
+            'Probability':[sample.probability for sample in result],
+            'States':[sample.state for sample in result],
+            'Amplitude':[sample.amplitude for sample in result],
+            'Int':[sample.state.int for sample in result],
+            'Int_lsb':[sample.state.lsb_int for sample in result]
+        })
+    pdf.reset_index(drop=True, inplace=True)
+    
+    pdf.sort_values('Int_lsb', inplace=True)
+    return pdf, circuit, q_prog, job
 
 
 
