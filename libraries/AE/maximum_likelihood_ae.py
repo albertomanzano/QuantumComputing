@@ -25,41 +25,8 @@ import pandas as pd
 import scipy.optimize as so
 from qat.core import Batch
 
-from utils import run_job, postprocess_results
-from data_extracting import create_qprogram, create_circuit, create_job
-from amplitude_amplification import load_q_gate, load_qn_gate
+from amplitude_amplification import grover
 
-def get_qpu(QLMASS=True):
-    """
-    Create the lineal solver for quantum jobs
-
-    Parameters
-    ----------
-
-    QLMASS : bool
-        If True  try to use QLM as a Service connection to CESGA QLM
-        If False PyLinalg simulator will be used
-
-    Returns
-    ----------
-    
-    linalg_qpu : solver for quantum jobs
-    """
-    if QLMASS:
-        try:
-            from qat.qlmaas import QLMaaSConnection
-            connection = QLMaaSConnection()
-            LinAlg = connection.get_qpu("qat.qpus:LinAlg")
-            linalg_qpu = LinAlg()
-        except (ImportError, OSError) as e:
-            print('Problem: usin PyLinalg')
-            from qat.qpus import PyLinalg
-            linalg_qpu = PyLinalg()
-    else:
-        print('User Forces: PyLinalg')
-        from qat.qpus import PyLinalg
-        linalg_qpu = PyLinalg()
-    return linalg_qpu
 
 def apply_gate(q_prog, q_gate, m_k, nbshots=0):
     """
