@@ -1,10 +1,20 @@
 """
+This project has received funding from the European Union’s Horizon 2020
+research and innovation programme under Grant Agreement No. 951821
+https://www.neasqc.eu/
+
 This module contains necesary functions and classes to implement
-Iterative Quantum Phase Estimation (IQPE)
+Iterative Quantum Phase Estimation (IQPE). The implementation is based on
+following paper:
+
+    Dobšíček, Miroslav and Johansson, Göran and Shumeiko, Vitaly and
+    Wendin, Göran*. 
+    Arbitrary accuracy iterative quantum phase estimation algorithm
+    using a single ancillary qubit: A two-qubit benchmark.
+    Physical Review A 3(76), 2007. 
+    https://arxiv.org/abs/quant-ph/0610214
 
 Author:Gonzalo Ferro Costas
-
-MyQLM version:
 
 """
 import copy
@@ -13,7 +23,7 @@ import pandas as pd
 from qat.lang.AQASM import H, PH
 from qat.comm.datamodel.ttypes import OpType
 from utils import run_job, postprocess_results
-from data_extracting import create_qprogram
+from data_extracting import create_qprogram, create_circuit, create_job
 from amplitude_amplification import load_qn_gate, load_q_gate
 
 def get_qpu(QLMASS=True):
@@ -31,7 +41,7 @@ def get_qpu(QLMASS=True):
 
     Returns
     ----------
-    lineal_qpu : simulator used for solvinf QLM circuits
+    linalg_qpu : simulator used for solvinf QLM circuits
 
     """
     if QLMASS:
@@ -39,16 +49,16 @@ def get_qpu(QLMASS=True):
             from qat.qlmaas import QLMaaSConnection
             connection = QLMaaSConnection()
             LinAlg = connection.get_qpu("qat.qpus:LinAlg")
-            lineal_qpu = LinAlg()
+            linalg_qpu = LinAlg()
         except (ImportError, OSError) as e:
             print('Problem: usin PyLinalg')
             from qat.qpus import PyLinalg
-            lineal_qpu = PyLinalg()
+            linalg_qpu = PyLinalg()
     else:
         print('User Forces: PyLinalg')
         from qat.qpus import PyLinalg
-        lineal_qpu = PyLinalg()
-    return lineal_qpu
+        linalg_qpu = PyLinalg()
+    return linalg_qpu
 
 def im_postprocess(result):
     """
@@ -297,7 +307,7 @@ class IterativeQuantumPE:
             #Creates the Grover-like operator from oracle
             self.q_gate = load_q_gate(self.oracle)
         else:
-            #In this case we load directly the initial state 
+            #In this case we load directly the initial state
             #and the grover operator
             self.init_q_prog = kwargs.get('initial_state', None)
             self.q_gate = kwargs.get('grover', None)
@@ -309,7 +319,7 @@ class IterativeQuantumPE:
         #Number Of classical bits for estimating phase
         self.cbits_number_ = kwargs.get('cbits_number', 8)
         #Set the QPU to use
-        self.lineal_qpu = kwargs.get('qpu', get_qpu())
+        self.linalg_qpu = kwargs.get('qpu', get_qpu())
         self.shots = kwargs.get('shots', 0)
         self.restart()
         self.easy = kwargs.get('easy', False)
@@ -363,7 +373,8 @@ class IterativeQuantumPE:
         """
         Creates the quantum circuit from the q_prog property
         """
-        self.circuit = self.q_prog.to_circ(submatrices_only=True)
+        #self.circuit = self.q_prog.to_circ(submatrices_only=True)
+        self.circuit = create_circuit(self.q_prog)
         self.meas_gates = [i for i, o in enumerate(self.circuit.ops)\
             if o.type == OpType.MEASURE]
 
@@ -371,19 +382,25 @@ class IterativeQuantumPE:
         """
         Creates the job from the circuit property
         """
-        self.job = self.circuit.to_job(
-            qubits=self.q_aux,
-            nbshots=self.shots,
-            aggregate_data=False
+        #self.job = self.circuit.to_job(
+        #    qubits=self.q_aux,
+        #    nbshots=self.shots,
+        #    aggregate_data=False
+        #)
+        self.job = create_job(
+            self.circuit,
+            shots=self.shots,
+            qubits=[self.q_aux]
         )
+        self.job.aggregate_data = False
 
     def get_job_result(self, qpu=None):
         """
         Submit a job property to QPU and get the results
         """
         if qpu is not None:
-            self.lineal_qpu = qpu
-        self.job_result = run_job(self.lineal_qpu.submit(self.job))
+            self.linalg_qpu = qpu
+        self.job_result = run_job(self.linalg_qpu.submit(self.job))
     
     def iqpe(self, number_of_cbits=None, shots=None):
         """
@@ -437,10 +454,11 @@ class IterativeQuantumPE:
         #Only angles between 0 an pi
         self.final_results['theta_90'] = self.final_results['Theta']
         self.final_results['theta_90'].where(
-            self.final_results['theta_90']< 0.5*np.pi, 
+            self.final_results['theta_90'] < 0.5*np.pi,
             np.pi-self.final_results['theta_90'],
             inplace=True)
         #Expected value of the function f(x) when x follows a p(x)
         #distribution probability
         self.final_results['E_p(f)'] = np.cos(self.final_results['Theta'])**2
-    
+
+
