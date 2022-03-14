@@ -191,13 +191,6 @@ class MLAE:
                 QLM gate with the Oracle for implementing the
                 Groover-like operator:
                 init_q_prog and q_gate will be interpreted as None
-            initial_state : QLM Program
-                QLM Program withe the initial Psi state over the
-                Grover-like operator will be applied
-                Only used if oracle is None
-            grover : QLM gate or routine
-                Grover-like operator which autovalues want to be calculated
-                Only used if oracle is None
             list_of_mks : list
                 python list with the different m_ks for executing the algortihm
             nbshots : int
@@ -214,6 +207,13 @@ class MLAE:
                 number of iterations of the optimizer
             display : bool
                 for displaying additional information in the optimization step
+            initial_state : QLM Program
+                QLM Program withe the initial Psi state over the
+                Grover-like operator will be applied
+                Only used if oracle is None
+            grover : QLM gate or routine
+                Grover-like operator which autovalues want to be calculated
+                Only used if oracle is None
         """
         #Setting attributes
         self.oracle = kwargs.get('oracle', None)
