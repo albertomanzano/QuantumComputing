@@ -1,6 +1,6 @@
 """
 Copyright 2022 CESGA
-License: Open Whatever
+License:
 
 This project has received funding from the European Union’s Horizon 2020
 research and innovation programme under Grant Agreement No. 951821
@@ -26,7 +26,7 @@ import scipy.optimize as so
 from qat.core import Batch
 
 from utils import run_job, postprocess_results
-from data_extracting import create_qprogram
+from data_extracting import create_qprogram, create_circuit, create_job
 from amplitude_amplification import load_q_gate, load_qn_gate
 
 def get_qpu(QLMASS=True):
@@ -43,25 +43,25 @@ def get_qpu(QLMASS=True):
     Returns
     ----------
     
-    lineal_qpu : solver for quantum jobs
+    linalg_qpu : solver for quantum jobs
     """
     if QLMASS:
         try:
             from qat.qlmaas import QLMaaSConnection
             connection = QLMaaSConnection()
             LinAlg = connection.get_qpu("qat.qpus:LinAlg")
-            lineal_qpu = LinAlg()
+            linalg_qpu = LinAlg()
         except (ImportError, OSError) as e:
             print('Problem: usin PyLinalg')
             from qat.qpus import PyLinalg
-            lineal_qpu = PyLinalg()
+            linalg_qpu = PyLinalg()
     else:
         print('User Forces: PyLinalg')
         from qat.qpus import PyLinalg
-        lineal_qpu = PyLinalg()
-    return lineal_qpu
+        linalg_qpu = PyLinalg()
+    return linalg_qpu
 
-def apply_gate(q_prog, q_gate, m_k, lineal_qpu, nbshots=0):
+def apply_gate(q_prog, q_gate, m_k, nbshots=0):
     """
     Apply the self.q_gate to the circuit a input number of times
     This method creates a quantum program that applies the
@@ -74,8 +74,6 @@ def apply_gate(q_prog, q_gate, m_k, lineal_qpu, nbshots=0):
         QLM gate with the Groover-like operator to be applied on the q_prog
     m_k : int
         number of times to apply the q_gate to the q_prog
-    lineal_qpu : QLM solver
-        QLM solver for submitting a QLM job
     nbshots : int
         number of shots to perform by the QLM solver
 
@@ -95,8 +93,10 @@ def apply_gate(q_prog, q_gate, m_k, lineal_qpu, nbshots=0):
     #    prog_q.apply(q_gate, q_bits)
     step_q_gate = load_qn_gate(q_gate, m_k)
     prog_q.apply(step_q_gate, q_bits)
-    circuit = prog_q.to_circ(submatrices_only=True)
-    job = circuit.to_job(qubits=[len(q_bits)-1], nbshots=nbshots)
+    #circuit = prog_q.to_circ(submatrices_only=True)
+    circuit = create_circuit(prog_q)
+    #job = circuit.to_job(qubits=[len(q_bits)-1], nbshots=nbshots)
+    job = create_job(circuit, shots=nbshots, qubits=[len(q_bits)-1])
     return circuit, job
 
 
@@ -108,7 +108,7 @@ def get_probabilities(InputPDF):
     Parameters
     ----------
 
-    InputPDF : pandas DataFrame. 
+    InputPDF : pandas DataFrame.
         DataFrame with the info of the measurments. Should have following
         columns:
         States : states for the qbit measurement
@@ -118,7 +118,7 @@ def get_probabilities(InputPDF):
     ----------
 
     output_pdf : pandas DataFrame
-        Changes the presentation of the results of a mesurement. 
+        Changes the presentation of the results of a mesurement.
         Columns are now the  probability of the different states.
     """
 
@@ -126,7 +126,7 @@ def get_probabilities(InputPDF):
     columns = ['Probability_{}'.format(i) for i in pdf['States']]
     output_pdf = pd.DataFrame(
         pdf['Probability'].values.reshape(1, len(pdf)),
-        columns = columns
+        columns=columns
     )
     return output_pdf
 
@@ -223,7 +223,7 @@ class MLAE:
             #Creates the Grover-like operator from oracle
             self.q_gate = load_q_gate(self.oracle)
         else:
-            #In this case we load directly the initial state 
+            #In this case we load directly the initial state
             #and the grover operator
             self.q_prog = kwargs.get('initial_state', None)
             self.q_gate = kwargs.get('grover', None)
@@ -239,7 +239,7 @@ class MLAE:
         #If 0 we compute the exact probabilities
         self.nbshots = kwargs.get('nbshots', 0)
         #Set the QPU to use
-        self.lineal_qpu = kwargs.get('qpu', get_qpu())
+        self.linalg_qpu = kwargs.get('qpu', get_qpu())
         ##delta for avoid problems in 0 and pi/2 theta limits
         self.delta = kwargs.get('delta', 1.0e-5)
         #This is the default number of shots used for computing
@@ -300,14 +300,13 @@ class MLAE:
             self.q_prog,
             self.q_gate,
             m_k,
-            self.lineal_qpu,
             nbshots=self.nbshots
         )
         return circuit, job
 
     def result_processing(self, result_, mk):
         """
-        This method receives a QLM Result object and proccess it in a 
+        This method receives a QLM Result object and proccess it in a
         propper way for posterior applying of maximum likelihood algorithm
 
         Parameters
@@ -368,7 +367,7 @@ class MLAE:
         """
         #Complete Job Submision
 
-        batch_result = self.lineal_qpu.submit(Batch(list_of_jobs))
+        batch_result = self.linalg_qpu.submit(Batch(list_of_jobs))
         results = run_job(batch_result)
 
         pdf_list = []
@@ -443,7 +442,7 @@ class MLAE:
     def launch_likelihood(self, pdf_input, N=100):
         """
         This method calculates the Likelihood for theta between [0, pi/2]
-        for an input pandas DataFrame. 
+        for an input pandas DataFrame.
 
         Parameters
         ----------
@@ -494,7 +493,7 @@ class MLAE:
         results : pandas DataFrame
             DataFrame with the results from ml-qpe procedure.
             Mandatory columns:
-            m_k : number of times Groover like operator was applied 
+            m_k : number of times Groover like operator was applied
             h_k : number of measures of the state |1>
             n_k : number of measurements done
 
@@ -514,6 +513,6 @@ class MLAE:
             self.iterations,
             disp=self.disp
         )
-        optimum_theta = optimizer[0] 
+        optimum_theta = optimizer[0]
         return optimum_theta
 
