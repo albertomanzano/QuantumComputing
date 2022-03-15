@@ -22,6 +22,14 @@ def bitfield(n, size):
     full = np.concatenate((left, right))
     return full.astype(int)
 
+# Convierte un entero n en un array de bits de longitud size
+def bitfield_to_int(lista):
+    integer = 0
+    for i in range(len(lista)):
+        integer += lista[-i-1]*2**i
+
+    return int(integer)
+
 @qlm.build_gate("Mask", [int, int], arity=lambda x, y: x)
 def mask(number_qubits, index):
     routine = qlm.QRoutine()
