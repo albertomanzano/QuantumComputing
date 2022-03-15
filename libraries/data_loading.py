@@ -24,9 +24,8 @@ Authors: Alberto Pedro Manzano Herrero
 
 """
 
-import qat.lang.AQASM as qlm
-from qat.lang.AQASM import QRoutine, RY, CNOT, build_gate
 import numpy as np
+import qat.lang.AQASM as qlm
 from utils import mask, fwht, test_bins, left_conditional_probability
 
 # Loading uniform distribution
@@ -188,12 +187,12 @@ id_name: str = '1'):
         AbstractGate customized for loading a normalised array
     """
     number_qubits = int(np.log2(function_array.size))+1
-    @build_gate("F_{"+id_name+"}", [], arity=number_qubits)
+    @qlm.build_gate("F_{"+id_name+"}", [], arity=number_qubits)
     def load_array_gate():
         """
         QLM Routine generation.
         """
-        routine = QRoutine()
+        routine = qlm.QRoutine()
         register = routine.new_wires(number_qubits)
         angles = 2*np.arccos(function_array)
         routine.apply(load_angles(angles, method=method), register)
@@ -221,12 +220,12 @@ def load_probability(probability_array: np.array):
     """
     number_qubits = int(np.log2(probability_array.size))
 
-    @build_gate("P", [], arity=number_qubits)
+    @qlm.build_gate("P", [], arity=number_qubits)
     def load_probability_gate():
         """
         QLM Routine generation.
         """
-        routine = QRoutine()
+        routine = qlm.QRoutine()
         register = routine.new_wires(number_qubits)
         # Now go iteratively trough each qubit computing the
         #probabilities and adding the corresponding multiplexor
@@ -240,7 +239,7 @@ def load_probability(probability_array: np.array):
             thetas = 2.0*(np.arccos(np.sqrt(conditional_probability)))
             if m == 0:
                 # In the first iteration it is only needed a RY gate
-                routine.apply(RY(thetas[0]), register[number_qubits-1])
+                routine.apply(qlm.RY(thetas[0]), register[number_qubits-1])
             else:
                 # In the following iterations we have to apply
                 # multiplexors controlled by m qubits
@@ -273,12 +272,12 @@ def load_pf(p_gate, f_gate):
         Customized AbstractGate for loading the P and R operators
     """
     nqbits = f_gate.arity
-    @build_gate("PF", [], arity=nqbits)
+    @qlm.build_gate("PF", [], arity=nqbits)
     def load_pf_gate():
         """
         QLM Routine generation.
         """
-        q_rout = QRoutine()
+        q_rout = qlm.QRoutine()
         qbits = q_rout.new_wires(nqbits)
         q_rout.apply(p_gate, qbits[:-1])
         q_rout.apply(f_gate, qbits)

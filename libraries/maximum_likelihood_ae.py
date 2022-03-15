@@ -29,14 +29,14 @@ from utils import run_job, postprocess_results
 from data_extracting import create_qprogram, create_circuit, create_job
 from amplitude_amplification import load_q_gate, load_qn_gate
 
-def get_qpu(QLMASS=True):
+def get_qpu(qlmass=True):
     """
     Create the lineal solver for quantum jobs
 
     Parameters
     ----------
 
-    QLMASS : bool
+    qlmass : bool
         If True  try to use QLM as a Service connection to CESGA QLM
         If False PyLinalg simulator will be used
 
@@ -45,7 +45,7 @@ def get_qpu(QLMASS=True):
     
     linalg_qpu : solver for quantum jobs
     """
-    if QLMASS:
+    if qlmass:
         try:
             from qat.qlmaas import QLMaaSConnection
             connection = QLMaaSConnection()

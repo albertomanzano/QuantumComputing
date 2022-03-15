@@ -20,13 +20,13 @@ Author:Gonzalo Ferro Costas
 import copy
 import numpy as np
 import pandas as pd
-from qat.lang.AQASM import H, PH
+import qat.lang.AQASM as qlm
 from qat.comm.datamodel.ttypes import OpType
 from utils import run_job, postprocess_results
 from data_extracting import create_qprogram, create_circuit, create_job
 from amplitude_amplification import load_qn_gate, load_q_gate
 
-def get_qpu(QLMASS=True):
+def get_qpu(qlmass=True):
     """
     Function for selecting solver. User can choose between QLM QPU in CESGA
     or using QLM simulator PyLinalg
@@ -34,7 +34,7 @@ def get_qpu(QLMASS=True):
     Parameters
     ----------
     
-    QLMASS : Bool
+    qlmass : Bool
         If True function will try to use QLM as a Service.
         If False fucntion will invoque PyLinalg QLM simulator
         
@@ -44,7 +44,7 @@ def get_qpu(QLMASS=True):
     linalg_qpu : simulator used for solvinf QLM circuits
 
     """
-    if QLMASS:
+    if qlmass:
         try:
             from qat.qlmaas import QLMaaSConnection
             connection = QLMaaSConnection()
@@ -178,7 +178,7 @@ def step_iqpe(q_prog, q_gate, q_aux, c_bits, l):
     #Getting the principal qbits
     q_bits = q_prog.registers[0]
     #First apply a Haddamard Gate to auxiliar qbit
-    q_prog.apply(H, q_aux)
+    q_prog.apply(qlm.H, q_aux)
     #number of bits for codify phase
     m = len(c_bits)
 
@@ -195,9 +195,9 @@ def step_iqpe(q_prog, q_gate, q_aux, c_bits, l):
     for j in range(m-l+1, m+1, 1):
         theta = 2**(m-l-j+1)
         #print('\t j: {}. theta: {}'.format(j-1, theta))
-        q_prog.cc_apply(c_bits[j-1], PH(-(np.pi/2.0)*theta), q_aux)
+        q_prog.cc_apply(c_bits[j-1], qlm.PH(-(np.pi/2.0)*theta), q_aux)
     #print('m: {}. l: {}'.format(m, l))
-    q_prog.apply(H, q_aux)
+    q_prog.apply(qlm.H, q_aux)
     #print(m-l-1)
     q_prog.measure(q_aux, c_bits[m-l-1])
     return q_prog
@@ -233,7 +233,7 @@ def step_iqpe_easy(q_prog, q_gate, q_aux, c_bits, l):
     #Getting the principal qbits
     q_bits = q_prog.registers[0]
     #First apply a Haddamard Gate to auxiliar qbit
-    q_prog.apply(H, q_aux)
+    q_prog.apply(qlm.H, q_aux)
     #number of bits for codify phase
     m = len(c_bits)
 
@@ -250,10 +250,10 @@ def step_iqpe_easy(q_prog, q_gate, q_aux, c_bits, l):
     for j in range(l):
         theta = 1.0/(2**(l-j-1))
         #print('\t j: {}. theta: {}'.format(j, theta))
-        q_prog.cc_apply(c_bits[j], PH(-(np.pi/2.0)*theta), q_aux)
+        q_prog.cc_apply(c_bits[j], qlm.PH(-(np.pi/2.0)*theta), q_aux)
 
     #print('m: {}. l: {}'.format(m, l))
-    q_prog.apply(H, q_aux)
+    q_prog.apply(qlm.H, q_aux)
     #print(m-l-1)
     q_prog.measure(q_aux, c_bits[l])
     return q_prog

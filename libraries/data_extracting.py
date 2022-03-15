@@ -10,12 +10,11 @@ qpu executions
 Authors: Alberto Pedro Manzano Herrero & Gonzalo Ferro Costas
 """
 
-import qat.lang.AQASM as qlm
-#from qat.qpus import LinAlg
-from qat.core import Result
 import numpy as np
-from utils import run_job, postprocess_results
+import qat.lang.AQASM as qlm
+from qat.core import Result
 from copy import deepcopy
+from utils import run_job, postprocess_results
 
 def create_qprogram(quantum_gate):
     """

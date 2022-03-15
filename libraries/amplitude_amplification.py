@@ -21,9 +21,9 @@ MyQLM version:
 
 """
 
-from qat.lang.AQASM import QRoutine, build_gate, X, Z, Program
+import qat.lang.AQASM as qlm
 
-@build_gate("U_Phi_0", [int], arity=lambda n: n)
+@qlm.build_gate("U_Phi_0", [int], arity=lambda n: n)
 def uphi0_gate(nqbits):
     """
     Circuit generator for creating gate U_Phi_0 for Phase
@@ -46,14 +46,14 @@ def uphi0_gate(nqbits):
         Quantum routine wiht the circuit implementation for operator:
             I-2|Phi_{n}>|0><0|<Phi_{n}|
     """
-    q_rout = QRoutine()
+    q_rout = qlm.QRoutine()
     qbits = q_rout.new_wires(nqbits)
-    q_rout.apply(X, qbits[-1])
-    q_rout.apply(Z, qbits[-1])
-    q_rout.apply(X, qbits[-1])
+    q_rout.apply(qlm.X, qbits[-1])
+    q_rout.apply(qlm.Z, qbits[-1])
+    q_rout.apply(qlm.X, qbits[-1])
     return q_rout
 
-@build_gate("D_0", [int], arity=lambda n: n)
+@qlm.build_gate("D_0", [int], arity=lambda n: n)
 def d0_gate(nqbits):
     """
     Circuit generator for create an Abstract Gate that implements a
@@ -70,15 +70,15 @@ def d0_gate(nqbits):
         Quantum routine wiht the circuit implementation for operator:
             I-2|0>_{n}{n}<0|
     """
-    q_rout = QRoutine()
+    q_rout = qlm.QRoutine()
     qbits = q_rout.new_wires(nqbits)
     for i in range(nqbits):
-        q_rout.apply(X, qbits[i])
+        q_rout.apply(qlm.X, qbits[i])
     #Controlled Z gate by n-1 first qbits
-    c_n_z = Z.ctrl(nqbits-1)
+    c_n_z = qlm.Z.ctrl(nqbits-1)
     q_rout.apply(c_n_z, qbits[:-1], qbits[-1])
     for i in range(nqbits):
-        q_rout.apply(X, qbits[i])
+        q_rout.apply(qlm.X, qbits[i])
     return q_rout
 
 def load_uphi_gate(gate):
@@ -99,7 +99,7 @@ def load_uphi_gate(gate):
     #The arity of the r_gate fix the number of qbits for the routine
     nqbits = gate.arity
 
-    @build_gate("UPhi", [], arity=nqbits)
+    @qlm.build_gate("UPhi", [], arity=nqbits)
     def u_phi_gate():
         """
         Circuit generator for the u_phi_gate.
@@ -110,7 +110,7 @@ def load_uphi_gate(gate):
             Quantum Routine with the circuit implementation for operator:
             R*P*D_0*P^{+}R^{+}
         """
-        q_rout = QRoutine()
+        q_rout = qlm.QRoutine()
         qbits = q_rout.new_wires(nqbits)
         q_rout.apply(gate.dag(), qbits)
         d_0 = d0_gate(nqbits)
@@ -140,7 +140,7 @@ def load_q_gate(pr_gate):
         Customized AbstractGate for Amplitude Amplification Algorithm
     """
     nqbits = pr_gate.arity
-    @build_gate("Q_Gate", [], arity=nqbits)
+    @qlm.build_gate("Q_Gate", [], arity=nqbits)
     def q_gate():
         """
         Function generator for creating an AbstractGate for implementation
@@ -150,7 +150,7 @@ def load_q_gate(pr_gate):
         q_rout : quantum routine
             Routine for Amplitude Amplification Algorithm
         """
-        q_rout = QRoutine()
+        q_rout = qlm.QRoutine()
         qbits = q_rout.new_wires(nqbits)
         q_rout.apply(uphi0_gate(nqbits), qbits)
         u_phi_gate = load_uphi_gate(pr_gate)
@@ -171,7 +171,7 @@ def load_qn_gate(qlm_gate, n):
         number of times the qlm_gate will be applied
 
     """
-    @build_gate("Q^{}".format(n), [], arity=qlm_gate.arity)
+    @qlm.build_gate("Q^{}".format(n), [], arity=qlm_gate.arity)
     def q_n_gate():
         """
         Function generator for creating an AbstractGate for apply
@@ -181,7 +181,7 @@ def load_qn_gate(qlm_gate, n):
         q_rout : quantum routine
             Routine for applying n times an input gate
         """
-        q_rout = QRoutine()
+        q_rout = qlm.QRoutine()
         q_bits = q_rout.new_wires(qlm_gate.arity)
         for _ in range(n):
             q_rout.apply(qlm_gate, q_bits)
@@ -202,7 +202,7 @@ def create_qprogram(quantum_gate):
     q_prog: QLM Program.
         Quantum Program from input QLM gate or routine
     """
-    q_prog = Program()
+    q_prog = qlm.Program()
     qbits = q_prog.qalloc(quantum_gate.arity)
     q_prog.apply(quantum_gate, qbits)
     return q_prog
