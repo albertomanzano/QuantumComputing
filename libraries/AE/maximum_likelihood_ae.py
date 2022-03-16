@@ -22,7 +22,7 @@ MyQLM version:
 import sys
 sys.path.append("../../")
 
-import copy
+from copy import deepcopy
 import numpy as np
 import pandas as pd
 import scipy.optimize as so
@@ -30,10 +30,9 @@ import scipy.optimize as so
 import qat.lang.AQASM as qlm 
 from qat.qpus import get_default_qpu
 
-from AE.amplitude_amplification import grover
-from data_extracting import get_results
-from libraries.utils import bitfield_to_int
-from copy import deepcopy
+from libraries.AE.amplitude_amplification import grover
+from libraries.data_extracting import get_results
+from libraries.utils import bitfield_to_int, check_list_type
 
 
 
@@ -67,10 +66,10 @@ class MLAE:
                 solver for simulating the resulting circutis
         """
         #Setting attributes
-        self.grover_oracle = None
-        self.target = target
-        self.index = index    
-        self.oracle = oracle
+        self._oracle = deepcopy(oracle)
+        self._target = check_list_type(target,int)
+        self._index = check_list_type(index,int)
+        self._grover_oracle = grover(self._oracle,self.target,self.index)
 
         #Set the QPU to use
         self.linalg_qpu = kwargs.get('qpu')
@@ -78,16 +77,16 @@ class MLAE:
             self.linalg_qpu = get_default_qpu()
 
         # The schedule of the method
-        self.m_k = kwargs.get('m_k', [10])
-        self.n_k = kwargs.get('n_k',[100]*len(self.m_k))
-        self.h_k = [0]*len(self.m_k)
-        self.compute_h_k()
+        self.m_k = None
+        self.n_k = None
+        self.h_k = None
+        self.schedule = kwargs.get('schedule',self.set_exponential_schedule(3,100)) 
 
         # Optimization
         self.optimizer = kwargs.get('optimizer',\
                 lambda x: so.brute(func = x,ranges = [(0,np.pi/2)]))
 
-
+    #####################################################################
     @property
     def oracle(self):
         return self._oracle
@@ -95,66 +94,74 @@ class MLAE:
     @oracle.setter
     def oracle(self,value):
         self._oracle = deepcopy(value) 
-        self.grover_oracle = grover(self.oracle,self.target,self.index)
-    
+        self._grover_oracle = grover(self.oracle,self.target,self.index)
+   
     @property
-    def m_k(self):
-        return self._m_k
+    def target(self):
+        return self._target
 
-    @m_k.setter
-    def m_k(self, value):
-        if type(value) in [list, int]:
-            if type(value) in [int]:
-                self._m_k = list(range(value))
-                self._m_k.reverse()
-            else:
-                self._m_k = value
-        else:
-            raise ValueError('For m_k only ints and list are aceptable types')
-        #We update the allocate classical bits each time we change cbits_number
-    
+    @target.setter
+    def target(self,value):
+        self._target = check_list_type(value,int)
+        self._grover_oracle = grover(self.oracle,self.target,self.index)
+
     @property
-    def n_k(self):
-        return self._n_k
+    def index(self):
+        return self._index
 
-    @n_k.setter
-    def n_k(self,value):
-        if (type(value)==int) and (value>0):
-            self._n_k = [value]*len(self.m_k)
-        elif (type(value)==list):
-            if (len(value)==len(self.m_k)):
-                self._n_k = value
-            else:
-                raise ValueError("Sizes of m_k and nbshots must match. Otherwise pass an int")
-        else:
-            self._n_k = [100]*len(self.m_k)
+    @index.setter
+    def index(self,value):
+        self._index = check_list_type(value,int)
+        self._grover_oracle = grover(self.oracle,self.target,self.index)
+
+    @property
+    def schedule(self):
+        return self._schedule
+
+    @schedule.setter
+    def schedule(self,value):
+        x = check_list_type(value,int)
+        if (x.shape[0]!=2):
+            raise Exception("The shape of the schedule must be (2,n)")
+        self._schedule = x
+        self.m_k = self.schedule[0]
+        self.n_k = self.schedule[1]        
+    #####################################################################
+
+    def set_linear_schedule(self,n: int,n_k: int):
+        x = np.arange(n)
+        y = [n_k]*n
+        self.schedule = [x,y]
+    
+    def set_exponential_schedule(self,n: int,n_k: int):
+        x = 2**np.arange(n)
+        y = [n_k]*n
+        self.schedule = [x,y]
+
         
-
  
     def run_step(self,m_k: int,n_k: int) -> int:
         """
-        This method applies the Grover-like operator self.q_gate to the
-        Quantum Program self.q_prog a given number of times m_k.
+        This method executes the Grover-like operator self._grover_oracle to the
+        a given number of times m_k.
 
         Parameters
         ----------
         m_k : int
             number of times to apply the self.q_gate to the quantum circuit
+        n_k : int
+            number of shots 
 
         Returns
         ----------
-
-        pdf_mks : pandas dataframe
-            results of the measurement of the last qbit
-        circuit : QLM circuit object
-            circuit object generated for the quantum program
-        job : QLM job object
+        h_k: int
+            number of positive events
         """
         routine = qlm.QRoutine()
         register = routine.new_wires(self.oracle.arity)
         routine.apply(self.oracle,register)
         for i in range(m_k):
-            routine.apply(self.grover_oracle,register)
+            routine.apply(self._grover_oracle,register)
         result, circuit, _, job = get_results(routine,linalg_qpu = self.linalg_qpu,shots = n_k,qubits = self.index)
         h_k = int(result["Probability"].iloc[bitfield_to_int(self.target)]*n_k)
 
@@ -165,7 +172,7 @@ class MLAE:
     def likelihood(theta: float, m_k: int, n_k: int,h_k: int)->float:
         """
         Calculates Likelihood from Suzuki papper. For h_k positive events
-        of n_k total events this function calculates the probability of
+        of n_k total events, this function calculates the probability of
         this taking into account that the probability of a positive
         event is given by theta and by m_k
         The idea is use this function to minimize it for this reason it gives
@@ -177,23 +184,18 @@ class MLAE:
         theta : float
             Angle (radians) for calculating the probability of measure a
             positive event.
-        m_k : pandas Series
-            For MLQAE this a pandas Series where each row is the number of
-            times the operator Q was applied.
-            We needed for calculating the probability of a positive event
-            for eack posible m_k value: sin((2*m_k+1)theta)**2.
-        h_k : pandas Series
-            Pandas Series where each row is the number of positive events
-            measured for each m_k
-        n_k : pandas Series
-            Pandas Series where each row is the number of total events
-            measured for each m_k
+        m_k : int
+            number of times the grover operator was applied.
+        n_k : int
+            number of total events measured for the specific  m_k
+        h_k : int
+            number of positive events measured for each m_k
 
         Returns
         ----------
 
         float
-            Gives the -Likelihood of the inputs
+            Gives the Likelihood p(h_k with m_k amplifications|theta)
 
         """
         with np.errstate(divide='ignore'):
@@ -203,36 +205,23 @@ class MLAE:
             l_k = first_term + second_term
         return l_k
 
-    def compute_h_k(self):
-        for i in range(len(self.m_k)):
-            self.h_k[i] = self.run_step(self.m_k[i],self.n_k[i])
 
     def cost_function(self,angle: float)->float:
         """
-        This method calculates the Likelihood for theta between [0, pi/2]
-        for an input pandas DataFrame.
+        This method calculates the -Likelihood of angle theta
+        for a given schedule m_k,n_k
 
         Parameters
         ----------
 
-        pdf_input: pandas DataFrame
-            The DataFrame should have following columns:
-            m_k: number of times q_gate was applied
-            h_k: number of times the state |1> was measured
-            n_k: number of total measuremnts
-
-        N : int
-            number of division for the theta interval
+        angle: float
+            the hypothetical angle
 
         Returns
         ----------
 
-        y : pandas DataFrame
-            Dataframe with the likelihood for the p_mks atribute. It has
-            2 columns:
-            theta : posible valores of the angle
-            l_k : likelihood for each theta
-
+        cost : float
+            the aggregation of the individual likelihoods
         """
         cost = 0
         for i in range(len(self.m_k)):
@@ -248,19 +237,15 @@ class MLAE:
         Parameters
         ----------
 
-        results : pandas DataFrame
-            DataFrame with the results from ml-qpe procedure.
-            Mandatory columns:
-            m_k : number of times Groover like operator was applied
-            h_k : number of measures of the state |1>
-            n_k : number of measurements done
-
-
         Returns
         ----------
 
-        optimum_theta : float
-            theta  that minimize likelihood
+        result[0] : float
+            angle that minimizes the cost function
         """
+        self.h_k = np.zeros(len(self.m_k),dtype = int)
+        for i in range(len(self.m_k)):
+            self.h_k[i] = self.run_step(self.m_k[i],self.n_k[i])
+        
         result = self.optimizer(self.cost_function)
         return result[0]
