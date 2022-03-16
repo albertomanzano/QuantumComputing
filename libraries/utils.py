@@ -16,19 +16,28 @@ import pandas as pd
 
 # Convierte un entero n en un array de bits de longitud size
 def bitfield(n, size):
+    """ Transforms an int n to the corresponding bitfield of size size"""
     aux = [1 if digit == '1' else 0 for digit in bin(n)[2:]]
     right = np.array(aux)
     left = np.zeros(max(size-right.size, 0))
     full = np.concatenate((left, right))
     return full.astype(int)
 
-# Convierte un entero n en un array de bits de longitud size
 def bitfield_to_int(lista):
+    """ Transforms a bitfield lista to the corresponding int"""
     integer = 0
     for i in range(len(lista)):
         integer += lista[-i-1]*2**i
-
     return int(integer)
+
+def check_list_type(x,tipo):
+    try:
+        y = np.array(x).astype(tipo,casting = "safe")
+    except TypeError:
+        exception ="Only a list/array of "+str(tipo)+" are aceptable types"
+        raise Exception(exception)
+    return y
+
 
 @qlm.build_gate("Mask", [int, int], arity=lambda x, y: x)
 def mask(number_qubits, index):
