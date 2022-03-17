@@ -27,7 +27,7 @@ Authors: Alberto Pedro Manzano Herrero
 import qat.lang.AQASM as qlm
 from qat.lang.AQASM import QRoutine, RY, CNOT, build_gate
 import numpy as np
-from utils import mask, fwht, test_bins, left_conditional_probability
+from libraries.utils import mask, fwht, test_bins, left_conditional_probability
 
 # Loading uniform distribution
 @qlm.build_gate("UD", [int], arity=lambda x: x)

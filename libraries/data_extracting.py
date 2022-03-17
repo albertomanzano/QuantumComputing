@@ -13,10 +13,10 @@ Authors: Alberto Pedro Manzano Herrero & Gonzalo Ferro Costas
 import qat.lang.AQASM as qlm
 from qat.core import Result
 from qat.qpus import get_default_qpu
-from utils import bitfield
+from libraries.utils import bitfield
 import numpy as np
 import pandas as pd
-pd.options.display.float_format = '{:.2f}'.format
+pd.options.display.float_format = '{:.6f}'.format
 np.set_printoptions(suppress=True)
 
 def get_results(quantum_object, linalg_qpu = None, shots:int = 0, qubits: list = None):

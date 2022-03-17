@@ -282,4 +282,4 @@ class MLAE:
             self.h_k[i] = self.run_step(self.m_k[i],self.n_k[i])
         
         result = self.optimizer(self.cost_function)
-        return result[0]
+        return result
