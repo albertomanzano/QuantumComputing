@@ -80,7 +80,11 @@ class MLAE:
         self.m_k = None
         self.n_k = None
         self.h_k = None
-        self.schedule = kwargs.get('schedule',self.set_exponential_schedule(3,100)) 
+        schedule = kwargs.get('schedule',None)
+        if (schedule is None):
+            self.set_linear_schedule(5,10)
+        else:
+            self.schedule = schedule
 
         # Optimization
         self.optimizer = kwargs.get('optimizer',\
@@ -198,11 +202,41 @@ class MLAE:
             Gives the Likelihood p(h_k with m_k amplifications|theta)
 
         """
-        with np.errstate(divide='ignore'):
-            theta_ = (2*m_k+1)*theta
-            first_term = 2*h_k*np.log(np.abs(np.sin(theta_)))
-            second_term = 2*(n_k-h_k)*np.log(np.abs(np.cos(theta_)))
-            l_k = first_term + second_term
+        theta_ = (2*m_k+1)*theta
+        p_0 = np.sin(theta_)**2
+        p_1 = np.cos(theta_)**2
+        l_k = (p_0**h_k)*(p_1**(n_k-h_k))
+        return l_k
+    
+    @staticmethod
+    def log_likelihood(theta: float, m_k: int, n_k: int,h_k: int)->float:
+        """
+        Calculates log of the likelihood from Suzuki papper.  
+
+        Parameters
+        ----------
+
+        theta : float
+            Angle (radians) for calculating the probability of measure a
+            positive event.
+        m_k : int
+            number of times the grover operator was applied.
+        n_k : int
+            number of total events measured for the specific  m_k
+        h_k : int
+            number of positive events measured for each m_k
+
+        Returns
+        ----------
+
+        float
+            Gives the log Likelihood p(h_k with m_k amplifications|theta)
+
+        """
+        theta_ = (2*m_k+1)*theta
+        p_0 = np.sin(theta_)**2
+        p_1 = np.cos(theta_)**2
+        l_k = h_k*p_0 + (n_k-h_k)*p_1
         return l_k
 
 
@@ -223,11 +257,11 @@ class MLAE:
         cost : float
             the aggregation of the individual likelihoods
         """
-        cost = 0
+        log_cost = 0
         for i in range(len(self.m_k)):
-            cost+=MLAE.likelihood(angle,self.m_k[i],self.n_k[i],self.h_k[i])
-
-        return -cost
+            log_l_k = MLAE.log_likelihood(angle,self.m_k[i],self.n_k[i],self.h_k[i])
+            log_cost = log_cost+log_l_k
+        return -log_cost
     
     def optimize(self)->float:
         """
