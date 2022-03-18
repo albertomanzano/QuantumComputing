@@ -77,7 +77,7 @@ def get_results(quantum_object, linalg_qpu, shots:int = 0, qubits: list = None):
         states.append("|"+ bin(i)[2:].zfill(qubits.size)+">")
 
     probability = np.zeros(2**qubits.size)
-    amplitude = np.zeros(2**qubits.size)
+    amplitude = np.zeros(2**qubits.size, dtype=np.complex_)
     for samples in result:
         probability[samples.state.lsb_int] = samples.probability
         amplitude[samples.state.lsb_int] = samples.amplitude
