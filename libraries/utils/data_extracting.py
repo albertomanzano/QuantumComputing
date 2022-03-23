@@ -10,16 +10,17 @@ qpu executions
 Authors: Alberto Pedro Manzano Herrero & Gonzalo Ferro Costas
 """
 
-import qat.lang.AQASM as qlm
-from qat.core import Result
-from qat.qpus import get_default_qpu
-from libraries.utils import bitfield, check_list_type
+from copy import deepcopy
 import numpy as np
 import pandas as pd
+import qat.lang.AQASM as qlm
+from qat.core import Result
+from libraries.utils.utils import check_list_type
+
 pd.options.display.float_format = '{:.6f}'.format
 np.set_printoptions(suppress=True)
 
-def get_results(quantum_object, linalg_qpu, shots:int = 0, qubits: list = None):
+def get_results(quantum_object, linalg_qpu, shots: int = 0, qubits: list = None):
     """
     Function for testing an input gate. This fucntion creates the
     quantum program for an input gate, the correspondent circuit
@@ -38,7 +39,7 @@ def get_results(quantum_object, linalg_qpu, shots:int = 0, qubits: list = None):
 
     Returns
     ----------
-    pdf_ : pandas DataFrame
+    pdf : pandas DataFrame
         DataFrame with the results of the simulation
     circuit : QLM circuit
     q_prog : QLM Program.
@@ -46,11 +47,11 @@ def get_results(quantum_object, linalg_qpu, shots:int = 0, qubits: list = None):
 
     """
     arity = quantum_object.arity
-    
+
     if qubits is None:
-        qubits = np.arange(arity,dtype = int)
+        qubits = np.arange(arity, dtype=int)
     else:
-        qubits = check_list_type(qubits,int)
+        qubits = check_list_type(qubits, int)
 
     if type(quantum_object) == qlm.Program:
         q_prog = deepcopy(quantum_object)
@@ -61,17 +62,17 @@ def get_results(quantum_object, linalg_qpu, shots:int = 0, qubits: list = None):
 
     circuit = q_prog.to_circ(submatrices_only=True)
     job = circuit.to_job(nbshots=shots, qubits=qubits)
-    
+
     result = linalg_qpu.submit(job)
-    if not isinstance(result,Result):
+    if not isinstance(result, Result):
         result = result.join()
-    
+
     # Process the results
     states = []
     list_int = []
     list_int_lsb = []
     for i in range(2**qubits.size):
-        reversed_i = int('{:0{width}b}'.format(i, width=qubits.size)[::-1],2)
+        reversed_i = int('{:0{width}b}'.format(i, width=qubits.size)[::-1], 2)
         list_int.append(reversed_i)
         list_int_lsb.append(i)
         states.append("|"+ bin(i)[2:].zfill(qubits.size)+">")
@@ -81,21 +82,14 @@ def get_results(quantum_object, linalg_qpu, shots:int = 0, qubits: list = None):
     for samples in result:
         probability[samples.state.lsb_int] = samples.probability
         amplitude[samples.state.lsb_int] = samples.amplitude
-    
+
     pdf = pd.DataFrame({
-            'States': states,
-            'Int_lsb': list_int_lsb,
-            'Probability': probability,
-            'Amplitude': amplitude,
-            'Int': list_int
-        }) 
- 
+        'States': states,
+        'Int_lsb': list_int_lsb,
+        'Probability': probability,
+        'Amplitude': amplitude,
+        'Int': list_int
+    })
+
     return pdf, circuit, q_prog, job
-
-
-
-
-
-
-
 

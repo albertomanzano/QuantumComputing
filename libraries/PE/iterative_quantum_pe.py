@@ -18,19 +18,16 @@ Author:Gonzalo Ferro Costas
 
 """
 
-import sys
-sys.path.append("../../")
 from copy import deepcopy
 import numpy as np
 import pandas as pd
 import qat.lang.AQASM as qlm
 from qat.core import Result
-from libraries.PE.some_utils import create_qprogram, create_job, load_qn_gate,\
+from libraries.utils.some_utils import create_qprogram, create_job, load_qn_gate,\
 create_circuit
-from libraries.qlm_solver import get_qpu
+from libraries.utils.qlm_solver import get_qpu
 
 
-    
 class IterativeQuantumPE:
     """
     Class for using Iterative Quantum Phase Estimation (IQPE) algorithm
@@ -138,7 +135,7 @@ class IterativeQuantumPE:
         Apply a complete IQPE algorithm
         """
         for l in range(len(self.c_bits)):
-            if self.zalo: 
+            if self.zalo:
                 self.q_prog = self.step_iqpe_zalo(
                     self.q_prog,
                     self.q_gate,
@@ -182,21 +179,19 @@ class IterativeQuantumPE:
             self.shots,
             self.linalg_qpu
         )
-        self.classical_bits = self.meas_classical_bits(results) 
+        self.classical_bits = self.meas_classical_bits(results)
         self.final_results = self.post_proccess(self.classical_bits)
         self.sumary = self.sumarize(self.final_results)
 
-
-    
     @staticmethod
     def step_iqpe_zalo(q_prog, q_gate, q_aux, c_bits, l):
         """
         Implements a iterative step of the Iterative Phase Estimation (IPE)
         algorithm.
-    
+
         Parameters
         ----------
-    
+
         q_prog : QLM program
             QLM Program where the unitary operator will be applied
         q_gate : QLM AbstractGate
@@ -212,10 +207,8 @@ class IterativeQuantumPE:
             list with the classical bits allocated for phase estimation
         l : int
             iteration step of the IPE algorithm
-    
         """
         print('VERSION GONZALO!!')
-    
         q_prog.reset(q_aux)
         #Getting the principal qbits
         q_bits = q_prog.registers[0]
@@ -223,17 +216,14 @@ class IterativeQuantumPE:
         q_prog.apply(qlm.H, q_aux)
         #number of bits for codify phase
         m = len(c_bits)
-    
+
         #Number of controlled application of the unitary operator by auxiliar
         #qbit over the principal qbits
         unitary_applications = int(2**(m-l-1))
         #print('unitary_applications: {}'.format(unitary_applications))
         step_q_gate = load_qn_gate(q_gate, unitary_applications)
         q_prog.apply(step_q_gate.ctrl(), q_aux, q_bits)
-    
-        #for i in range(unitary_applications):
-        #    q_prog.apply(q_gate.ctrl(), q_aux, q_bits)
-    
+
         for j in range(m-l+1, m+1, 1):
             theta = 2**(m-l-j+1)
             #print('\t j: {}. theta: {}'.format(j-1, theta))
@@ -315,13 +305,13 @@ class IterativeQuantumPE:
     def meas_classical_bits(result):
         """
         Post Proccess intermediate measurements from a qlm result.
-    
+
         Parameters
         ----------
-    
+
         result : list
             list with qlm results
-    
+
         Returns
         ----------
         pdf : pandas DataFrame
@@ -334,22 +324,21 @@ class IterativeQuantumPE:
             Probability : float. Probability of the measurement of the
                 classsical bits.
         """
-    
         list_of_results = []
-    
+
         for r in result:
             bit_list = []
             for i, im in enumerate(r.intermediate_measurements):
                 if i%2 == 1:
                     bit_list.append(str(int(im.cbits[0])))
-    
+
             #Needed order the bits
             bit_list.reverse()
-    
+
             bit_string = ''.join(bit_list)
             bit_int = int(bit_string, 2)
             phi = bit_int/(2**len(bit_list))
-    
+
             pdf = pd.DataFrame({
                 #'Probs': [prob_list],
                 'BitString': [bit_string],
@@ -384,7 +373,7 @@ class IterativeQuantumPE:
         return final_results
 
     @staticmethod
-    def sumarize(InputPDF, column = ['theta_90']):
+    def sumarize(InputPDF, column=['theta_90']):
         pdf = InputPDF.copy(deep=True)
         pds = pdf.value_counts(column)
         pds.name = 'Freqcueny'
