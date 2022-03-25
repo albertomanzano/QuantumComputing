@@ -80,7 +80,7 @@ class MLAE:
         self.h_k = None
         schedule = kwargs.get('schedule', None)
         if schedule is None:
-            self.set_linear_schedule(5, 10)
+            self.set_linear_schedule(5, 50)
         else:
             self.schedule = schedule
 

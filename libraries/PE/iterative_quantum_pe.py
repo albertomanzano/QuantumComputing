@@ -358,11 +358,11 @@ class IterativeQuantumPE:
         """
         final_results = InputPDF.copy(deep=True)
         #Eigenvalue of the Grover-like operator
-        final_results['Theta_Unitary'] = 2*np.pi*final_results['Phi']
+        final_results['2*theta'] = 2*np.pi*final_results['Phi']
         #Rotation angle for Grover-like operator.
-        final_results['Theta'] = np.pi*final_results['Phi']
+        final_results['theta'] = np.pi*final_results['Phi']
         #Only angles between 0 an pi
-        final_results['theta_90'] = final_results['Theta']
+        final_results['theta_90'] = final_results['theta']
         final_results['theta_90'].where(
             final_results['theta_90'] < 0.5*np.pi,
             np.pi-final_results['theta_90'],
