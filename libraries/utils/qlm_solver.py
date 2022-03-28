@@ -21,7 +21,7 @@ def get_qpu(qlmass=False):
     Returns
     ----------
 
-    lineal_qpu : solver for quantum jobs
+    linal_qpu : solver for quantum jobs
     """
     if qlmass:
         if global_qlmaas:

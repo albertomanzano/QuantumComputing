@@ -16,8 +16,22 @@ import pandas as pd
 import qat.lang.AQASM as qlm
 
 # Convierte un entero n en un array de bits de longitud size
-def bitfield(n, size):
-    """ Transforms an int n to the corresponding bitfield of size size"""
+def bitfield(n: int, size: int):
+    """ Transforms an int n to the corresponding bitfield of size size
+
+    Parameters
+    ----------
+    n : int
+        integer from which we want to obtain the bitfield
+    size : int
+        size of the bitfield
+    
+    Returns    
+    ----------
+    full : list of ints
+        bitfield representation of n with size size
+
+    """
     aux = [1 if digit == '1' else 0 for digit in bin(n)[2:]]
     right = np.array(aux)
     left = np.zeros(max(size-right.size, 0))
@@ -25,13 +39,36 @@ def bitfield(n, size):
     return full.astype(int)
 
 def bitfield_to_int(lista):
-    """ Transforms a bitfield lista to the corresponding int"""
+    """ Transforms the bitfield lista to the corresponding int
+    Parameters
+    ----------
+    lista : ist of ints
+        bitfield
+    
+    Returns    
+    ----------
+    integer : int
+        integer obtained from it's binay representation.
+    """
+
     integer = 0
     for i in range(len(lista)):
         integer += lista[-i-1]*2**i
     return int(integer)
 
 def check_list_type(x, tipo):
+    """ Check if a list x is of type tipo 
+    Parameters
+    ----------
+    x : list
+    tipo : data type
+        it has to be understandable by numpy
+    
+    Returns    
+    ----------
+    y : np.array
+        numpy array of type tipo.
+    """
     try:
         y = np.array(x).astype(tipo, casting="safe")
     except TypeError:
@@ -42,6 +79,19 @@ def check_list_type(x, tipo):
 
 @qlm.build_gate("Mask", [int, int], arity=lambda x, y: x)
 def mask(number_qubits, index):
+    """ Transforms the state |index> into the state
+    |11...1> of size number qubits.
+    Parameters
+    ----------
+    number_qubits : int
+    index : int
+    
+    Returns    
+    ----------
+    mask : Qlm abstract gate
+        the gate that we have to apply in order to transform
+        state |index>. Note that it affects all states.
+    """
     routine = qlm.QRoutine()
     quantum_register = routine.new_wires(number_qubits)
     bits = bitfield(index, number_qubits)
@@ -53,7 +103,17 @@ def mask(number_qubits, index):
 
 def fwht_natural(array: np.array):
     """Fast Walsh-Hadamard Transform of array x in natural ordering
-    The result is not normalised"""
+    The result is not normalised
+    Parameters
+    ----------
+    array : numpy array
+    
+    Returns    
+    ----------
+    a : numpy array
+        Fast Walsh Hadamard transform of array x.
+        
+    """
     a = array.copy()
     h = 1
     while h < len(a):
@@ -73,6 +133,15 @@ def fwht_sequency(x: np.array):
     algorithm.
     His code is according to the K.G. Beauchamp's book -- Applications
     of Walsh and Related Functions.
+    Parameters
+    ----------
+    x : numpy array
+    
+    Returns    
+    ----------
+    x : numpy array
+        Fast Walsh Hadamard transform of array x.
+        
     """
     N = x.size
     G = int(N/2) # Number of Groups
@@ -103,6 +172,15 @@ def fwht_dyadic(x: np.array):
     algorithm.
     His code is according to the K.G. Beauchamp's book -- Applications
     of Walsh and Related Functions.
+    Parameters
+    ----------
+    array : numpy array
+    
+    Returns    
+    ----------
+    x : numpy array
+        Fast Walsh Hadamard transform of array x.
+        
     """
     N = x.size
     G = int(N/2) # Number of Groups
@@ -127,6 +205,23 @@ def fwht_dyadic(x: np.array):
     return x
 
 def fwht(x: np.array, ordering: str = "sequency"):
+    """ Fast Walsh Hadamard transform of array x
+    Works as a wrapper for the different orderings
+    of the Walsh-Hadamard transforms.
+
+    Parameters
+    ----------
+    x : numpy array
+    ordering: string
+        desired ordering of the transform
+    
+    Returns    
+    ----------
+    y : numpy array
+        Fast Walsh Hadamard transform of array x
+        in the corresponding ordering
+    """
+        
     if ordering == "natural":
         y = fwht_natural(x)
     elif ordering == "dyadic":

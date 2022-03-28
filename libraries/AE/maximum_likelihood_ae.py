@@ -14,7 +14,7 @@ Maximum Likelihood Amplitude Estimation based on the paper:
     Quantum Information Processing, 19(2), 2020
     arXiv: quant-ph/1904.10246v2
 
-Author:Gonzalo Ferro Costas
+Author: Gonzalo Ferro Costas & Alberto Manzano Herrero
 
 MyQLM version:
 
@@ -45,21 +45,27 @@ class MLAE:
 
         Parameters
         ----------
+        oracle: QLM gate
+            QLM gate with the Oracle for implementing the
+            Grover operator:
+            init_q_prog and q_gate will be interpreted as None
+        target : list of ints
+            python list with the target for the amplitude estimation 
+        index : list of ints
+            qubits which mark the register to do the amplitude
+            estimation
 
         kwars : dictionary
             dictionary that allows the configuration of the MLAE algorithm:
             Implemented keys:
-            oracle: QLM gate
-                QLM gate with the Oracle for implementing the
-                Groover-like operator:
-                init_q_prog and q_gate will be interpreted as None
-            list_of_mks : list
-                python list with the different m_ks for executing the algortihm
-            nbshots : int
-                number of shots for quantum job. If 0 exact probabilities
-                will be computed.
-            qpu : QLM solver
-                solver for simulating the resulting circutis
+        qpu : QLM solver
+            solver for simulating the resulting circutis
+        schedule : list of two lists
+            the schedule for the algorithm
+        optimizer : 
+            an optimizer with just one possible entry
+        delta : float
+            tolerance to avoid division by zero warnings
         """
         #Setting attributes
         self._oracle = deepcopy(oracle)
@@ -145,8 +151,7 @@ class MLAE:
 
     def run_step(self, m_k: int, n_k: int) -> int:
         """
-        This method executes the Grover-like operator self._grover_oracle to the
-        a given number of times m_k.
+        This method executes on step of the MLAE algorithm
 
         Parameters
         ----------
@@ -274,8 +279,7 @@ class MLAE:
 
     def optimize(self)->float:
         """
-        This functions execute a brute force optimization of the
-        likelihood function for an input results pdf.
+        This functions optimizes the cost_function
 
         Parameters
         ----------
@@ -283,8 +287,9 @@ class MLAE:
         Returns
         ----------
 
-        result[0] : float
-            angle that minimizes the cost function
+        result : 
+            the type of the result is the type of the result
+            of the optimizer
         """
         self.h_k = np.zeros(len(self.m_k), dtype=int)
         for i in range(len(self.m_k)):
