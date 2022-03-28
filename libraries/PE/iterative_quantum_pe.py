@@ -376,6 +376,5 @@ class IterativeQuantumPE:
     def sumarize(InputPDF, column=['theta_90']):
         pdf = InputPDF.copy(deep=True)
         pds = pdf.value_counts(column)
-        pds.name = 'Freqcueny'
+        pds.name = 'Frequency'
         return pd.DataFrame(pds).reset_index()
-

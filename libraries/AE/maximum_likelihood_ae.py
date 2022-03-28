@@ -21,7 +21,6 @@ MyQLM version:
 """
 
 from copy import deepcopy
-import sys
 import numpy as np
 import scipy.optimize as so
 import qat.lang.AQASM as qlm
@@ -50,7 +49,7 @@ class MLAE:
             Grover operator:
             init_q_prog and q_gate will be interpreted as None
         target : list of ints
-            python list with the target for the amplitude estimation 
+            python list with the target for the amplitude estimation
         index : list of ints
             qubits which mark the register to do the amplitude
             estimation
@@ -62,7 +61,7 @@ class MLAE:
             solver for simulating the resulting circutis
         schedule : list of two lists
             the schedule for the algorithm
-        optimizer : 
+        optimizer :
             an optimizer with just one possible entry
         delta : float
             tolerance to avoid division by zero warnings
@@ -287,7 +286,7 @@ class MLAE:
         Returns
         ----------
 
-        result : 
+        result :
             the type of the result is the type of the result
             of the optimizer
         """

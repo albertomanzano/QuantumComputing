@@ -19,10 +19,11 @@ Version: Initial version
 MyQLM version:
 
 """
-import numpy as np
+
 import time
-import qat.lang.AQASM as qlm 
 from copy import deepcopy
+import numpy as np
+import qat.lang.AQASM as qlm
 
 
 def reflection(lista: np.ndarray):
@@ -33,7 +34,7 @@ def reflection(lista: np.ndarray):
     Parameters
     ----------
     lista: list of ints
-        binary representation of the 
+        binary representation of the
         State that we want to rotate pi
 
     Returns
@@ -41,24 +42,24 @@ def reflection(lista: np.ndarray):
     reflection_gate : QLM gate
     """
     number_qubits = len(lista)
-    @qlm.build_gate("R_{"+str(lista)+"}", [], arity= number_qubits)
+    @qlm.build_gate("R_{"+str(lista)+"}", [], arity=number_qubits)
     def reflection_gate():
         routine = qlm.QRoutine()
         register = routine.new_wires(number_qubits)
 
         for i in range(number_qubits):
-            if (lista[i] == 0):
-                routine.apply(qlm.X,register[-i-1])
-        routine.apply(qlm.Z.ctrl(len(lista)-1),register)
+            if lista[i] == 0:
+                routine.apply(qlm.X, register[-i-1])
+        routine.apply(qlm.Z.ctrl(len(lista)-1), register)
         for i in range(number_qubits):
-            if (lista[i] == 0):
-                routine.apply(qlm.X,register[-i-1])
+            if lista[i] == 0:
+                routine.apply(qlm.X, register[-i-1])
         return routine
     return reflection_gate()
 
 
 
-def U0(oracle: qlm.QRoutine,target: np.ndarray,index: np.ndarray):
+def U0(oracle: qlm.QRoutine, target: np.ndarray, index: np.ndarray):
     """Given an oracle O|0> = a|target>+...
     this function returns a QLM gate that does
     a|target>--->-a|target>
@@ -81,7 +82,7 @@ def U0(oracle: qlm.QRoutine,target: np.ndarray,index: np.ndarray):
     def U0_gate():
         routine = qlm.QRoutine()
         register = routine.new_wires(number_qubits)
-        routine.apply(reflection(target),[register[i] for i in index])
+        routine.apply(reflection(target), [register[i] for i in index])
         return routine
     return U0_gate()
 
@@ -103,24 +104,24 @@ def U(oracle: qlm.QRoutine):
     oracle_cp = deepcopy(oracle)
     number_qubits = oracle.arity
     @qlm.build_gate("U_"+str(time.time_ns()), [], arity=number_qubits)
-    def U_gate():   
+    def U_gate():
         routine = qlm.QRoutine()
         register = routine.new_wires(number_qubits)
-        routine.apply(oracle.dag(),register)
-        routine.apply(reflection(np.zeros(number_qubits,dtype=int)),register)
-        routine.apply(oracle,register)
+        routine.apply(oracle.dag(), register)
+        routine.apply(reflection(np.zeros(number_qubits, dtype=int)), register)
+        routine.apply(oracle, register)
         return routine
     return U_gate()
 
 
-def grover(oracle: qlm.QRoutine,target: np.ndarray,index: np.ndarray):
+def grover(oracle: qlm.QRoutine, target: np.ndarray, index: np.ndarray):
     """This function returns a QLM abstract gate
-    that returns the grover associated grover to oracle for a 
+    that returns the grover associated grover to oracle for a
     given target and index.
 
     Parameters
     ----------
-    oracle : QLM routine/gate 
+    oracle : QLM routine/gate
     target : list of ints
         the state that we want to amplify
     index : list of ints
@@ -133,14 +134,11 @@ def grover(oracle: qlm.QRoutine,target: np.ndarray,index: np.ndarray):
     oracle_cp = deepcopy(oracle)
     number_qubits = oracle_cp.arity
     @qlm.build_gate("G_"+str(time.time_ns()), [], arity=number_qubits)
-    def grover_gate():        
+    def grover_gate():
         routine = qlm.QRoutine()
         register = routine.new_wires(number_qubits)
-        routine.apply(U0(oracle_cp,target,index),register)
-        routine.apply(U(oracle_cp),register)
+        routine.apply(U0(oracle_cp, target, index), register)
+        routine.apply(U(oracle_cp), register)
         return routine
     return grover_gate()
-
-
-
 
